@@ -151,30 +151,50 @@ function ClientList() {
   );
 }
 
-function BookingTable() {
-  const [bookings, setBookings] = useState([
-    { id: '1', client: 'Ana Novak', service: 'Globinsko čiščenje', date: '2023-11-15', time: '09:00', price: '85 €', status: 'Pending' },
-    { id: '2', client: 'Marko Kovač', service: 'Splošno čiščenje', date: '2023-11-15', time: '13:00', price: '45 €', status: 'Confirmed' },
-    { id: '3', client: 'Petra Zajc', service: 'Čiščenje ob odhodu', date: '2023-11-16', time: '08:00', price: '120 €', status: 'Completed' },
-    { id: '4', client: 'Luka Horvat', service: 'Pisarniško čiščenje', date: '2023-11-17', time: '17:00', price: '60 €', status: 'Cancelled' },
-  ]);
+import { useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
-  const updateStatus = (id: string, newStatus: string) => {
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+function BookingTable() {
+  const [bookings, setBookings] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      const { data } = await supabase
+        .from('booking_inquiries')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) {
+        setBookings(data);
+      }
+    };
+    fetchBookings();
+  }, []);
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('booking_inquiries')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (!error) {
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+    }
   };
 
   const statusColors: Record<string, string> = {
-    'Pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'Confirmed': 'bg-blue-100 text-blue-700 border-blue-200',
-    'Completed': 'bg-teal-100 text-teal-700 border-teal-200',
-    'Cancelled': 'bg-red-100 text-red-700 border-red-200',
+    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
+    'confirmed': 'bg-blue-100 text-blue-700 border-blue-200',
+    'completed': 'bg-teal-100 text-teal-700 border-teal-200',
+    'rejected': 'bg-red-100 text-red-700 border-red-200',
+    'cancelled': 'bg-gray-100 text-gray-700 border-gray-200',
   };
 
   const statusTranslations: Record<string, string> = {
-    'Pending': 'Na čakanju',
-    'Confirmed': 'Potrjeno',
-    'Completed': 'Zaključeno',
-    'Cancelled': 'Odpovedano',
+    'pending': 'Na čakanju',
+    'confirmed': 'Potrjeno',
+    'completed': 'Zaključeno',
+    'rejected': 'Zavrnjeno',
+    'cancelled': 'Odpovedano',
   };
 
   return (
@@ -190,42 +210,51 @@ function BookingTable() {
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Stranka</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Storitev</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Datum in čas</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Cena</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Kontakt</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Akcije</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {bookings.map(booking => (
-              <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{booking.client}</td>
-                <td className="py-4 px-6 text-gray-600 text-sm">{booking.service}</td>
+            {bookings.map((booking: Record<string, unknown>) => (
+              <tr key={booking.id as string} className="hover:bg-gray-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{booking.full_name as string}</td>
+                <td className="py-4 px-6 text-gray-600 text-sm">
+                  {booking.service_type === 'general' ? 'Splošno čiščenje' :
+                   booking.service_type === 'deep' ? 'Globinsko čiščenje' :
+                   booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
                   <div className="flex flex-col">
-                    <span>{new Date(booking.date).toLocaleDateString('sl-SI')}</span>
-                    <span className="text-xs text-gray-400 font-bold">{booking.time}</span>
+                    <span>{booking.date ? new Date(booking.date as string).toLocaleDateString('sl-SI') : 'Ni izbrano'}</span>
+                    <span className="text-xs text-gray-400 font-bold">{(booking.time as string) || 'Ni izbrano'}</span>
                   </div>
                 </td>
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{booking.price}</td>
+                <td className="py-4 px-6 font-bold text-navy-500 text-sm">
+                  <div className="flex flex-col">
+                    <span className="text-xs">{booking.email as string}</span>
+                    <span className="text-xs font-normal text-gray-500">{booking.phone as string}</span>
+                  </div>
+                </td>
                 <td className="py-4 px-6">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status]}`}>
-                    {statusTranslations[booking.status]}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['pending']}`}>
+                    {statusTranslations[booking.status as string] || 'Na čakanju'}
                   </span>
                 </td>
                 <td className="py-4 px-6 text-right space-x-2">
-                  {booking.status === 'Pending' && (
-                    <button onClick={() => updateStatus(booking.id, 'Confirmed')} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors">
-                      Potrdi
-                    </button>
+                  {booking.status === 'pending' && (
+                    <>
+                      <button onClick={() => updateStatus(booking.id as string, 'confirmed')} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
+                        Potrdi
+                      </button>
+                      <button onClick={() => updateStatus(booking.id as string, 'rejected')} className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors">
+                        Zavrni
+                      </button>
+                    </>
                   )}
-                  {booking.status === 'Confirmed' && (
-                    <button onClick={() => updateStatus(booking.id, 'Completed')} className="px-3 py-1 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg text-xs font-bold transition-colors">
+                  {booking.status === 'confirmed' && (
+                    <button onClick={() => updateStatus(booking.id as string, 'completed')} className="px-3 py-1 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg text-xs font-bold transition-colors">
                       Zaključi
-                    </button>
-                  )}
-                  {(booking.status === 'Pending' || booking.status === 'Confirmed') && (
-                    <button onClick={() => updateStatus(booking.id, 'Cancelled')} className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors">
-                      Odpovej
                     </button>
                   )}
                 </td>
