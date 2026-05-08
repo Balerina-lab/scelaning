@@ -129,14 +129,14 @@ export default function Profile() {
                   {bookings.map((booking: Record<string, unknown>) => (
                     <tr key={booking.id as string} className="hover:bg-gray-50/50 transition-colors">
                       <td className="py-5 px-6 font-bold text-navy-500 text-sm">
-                        {booking.cleaning_type === 'general' ? 'Splošno čiščenje' :
-                         booking.cleaning_type === 'deep' ? 'Globinsko čiščenje' :
-                         booking.cleaning_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                        {booking.service_type === 'general' ? 'Splošno čiščenje' :
+                         booking.service_type === 'deep' ? 'Globinsko čiščenje' :
+                         booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
                       </td>
                       <td className="py-5 px-6 text-gray-600 text-sm">
                         <div className="flex flex-col">
-                          <span>{booking.preferred_date ? new Date(booking.preferred_date as string).toLocaleDateString('sl-SI') : 'Ni izbrano'}</span>
-                          <span className="text-xs text-gray-400 font-bold">{(booking.preferred_time as string) || 'Ni izbrano'}</span>
+                          <span>{booking.date ? new Date(booking.date as string).toLocaleDateString('sl-SI') : 'Ni izbrano'}</span>
+                          <span className="text-xs text-gray-400 font-bold">{(booking.time as string) || 'Ni izbrano'}</span>
                         </div>
                       </td>
                       <td className="py-5 px-6 text-gray-600 text-sm max-w-[200px] truncate" title={booking.address as string}>

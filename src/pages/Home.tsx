@@ -80,7 +80,7 @@ function Header() {
           {user ? (
             <Link to="/profile" className="text-white/80 hover:text-teal-400 font-bold text-sm transition-colors flex items-center gap-2">
               <span className="w-8 h-8 rounded-full bg-teal-400/20 text-teal-400 flex items-center justify-center font-black">
-                {user.email?.charAt(0).toUpperCase()}
+                {user.email?.charAt(0)?.toUpperCase()}
               </span>
               Profil
             </Link>
@@ -440,7 +440,6 @@ function BookingForm() {
     special_requests: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -462,27 +461,23 @@ function BookingForm() {
 
     setSubmitting(true);
     setError(null);
-    const estimate = estimatePrice(form.rooms, form.sqft, form.cleaning_type);
     const { error: dbError } = await supabase.from('booking_inquiries').insert({
       user_id: user.id,
-      name: form.name,
-      email: form.email,
+      full_name: form.name,
       phone: form.phone,
       address: form.address,
+      service_type: form.cleaning_type,
       rooms: form.rooms,
-      sqft: form.sqft,
-      cleaning_type: form.cleaning_type,
-      preferred_date: form.preferred_date || null,
-      preferred_time: form.preferred_time,
+      area: form.sqft,
+      date: form.preferred_date || null,
+      time: form.preferred_time,
       special_requests: form.special_requests,
-      estimated_price_min: estimate?.min ?? 0,
-      estimated_price_max: estimate?.max ?? 0,
     });
     setSubmitting(false);
     if (dbError) {
       setError('Prišlo je do napake. Prosimo, poskusite znova ali nas kontaktirajte neposredno.');
     } else {
-      setSubmitted(true);
+      navigate('/profile');
     }
   };
 
@@ -490,25 +485,6 @@ function BookingForm() {
                       (!form.preferred_date || !form.preferred_time) ? 2 :
                       (!form.name || !form.email || !form.phone || !form.address) ? 3 : 4;
 
-  if (submitted) {
-    return (
-      <div className="text-center py-16 px-8">
-        <div className="w-20 h-20 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle size={40} className="text-teal-400" />
-        </div>
-        <h3 className="text-2xl font-extrabold text-navy-500 mb-3">Upit poslan!</h3>
-        <p className="text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
-          Hvala za vaše povpraševanje. Hristina vas bo kontaktirala v 24 urah s potrdilom in končno ponudbo.
-        </p>
-        <button
-          onClick={() => { setSubmitted(false); setForm({ name: '', email: '', phone: '', address: '', rooms: 1, sqft: 0, cleaning_type: 'general', preferred_date: '', preferred_time: '', special_requests: '' }); }}
-          className="bg-teal-400 hover:bg-teal-300 text-navy-500 font-bold px-8 py-3 rounded-xl transition-all duration-200"
-        >
-          Novo povpraševanje
-        </button>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
