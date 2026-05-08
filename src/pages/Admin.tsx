@@ -30,7 +30,7 @@ export default function Admin() {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 bg-navy-500 w-64 text-white flex flex-col transition-transform duration-300 z-50 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
-          <div className="font-black text-xl text-teal-400 tracking-wide">SCLEANING ADMIN</div>
+          <img src="/SCleaning-logo.png" alt="S Cleaning Logo" className="h-10 object-contain brightness-0 invert" />
           <button className="md:hidden" onClick={() => setMenuOpen(false)}><X size={20} /></button>
         </div>
         <nav className="flex-1 p-4 space-y-2">
