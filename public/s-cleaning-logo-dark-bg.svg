@@ -1,0 +1,26 @@
+<svg width="280" height="120" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background -->
+  <rect width="280" height="120" rx="12" fill="#2C3E50"/>
+
+  <!-- S letter shape -->
+  <path
+    d="M92 32C92 26.477 87.523 22 82 22H70C64.477 22 60 26.477 60 32C60 37.523 64.477 42 70 42H90C95.523 42 100 46.477 100 52C100 57.523 95.523 62 90 62H68"
+    stroke="#1ABC9C"
+    stroke-width="6"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Broom handle -->
+  <line x1="68" y1="62" x2="55" y2="78" stroke="#1ABC9C" stroke-width="4" stroke-linecap="round"/>
+  <!-- Broom bristles -->
+  <path d="M48 78 Q55 73 62 78 Q55 83 48 78Z" fill="#1ABC9C"/>
+  <!-- Bubbles/dots -->
+  <circle cx="102" cy="32" r="4" fill="#1ABC9C" opacity="0.7"/>
+  <circle cx="110" cy="42" r="2.5" fill="#1ABC9C" opacity="0.5"/>
+  <circle cx="106" cy="24" r="2" fill="#1ABC9C" opacity="0.4"/>
+
+  <!-- S CLEANING text -->
+  <text x="126" y="48" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="26" fill="#1ABC9C" letter-spacing="2">S CLEANING</text>
+  <!-- Hristina Savic text -->
+  <text x="127" y="64" font-family="Nunito, Arial, sans-serif" font-weight="600" font-size="10" fill="rgba(255,255,255,0.5)" letter-spacing="3">HRISTINA SAVIĆ S.P.</text>
+</svg>
