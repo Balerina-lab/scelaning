@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, Mail, MapPin, Clock, Star, Shield, Sparkles, ChevronDown, Menu, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Star, Shield, Sparkles, ChevronDown, Menu, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
 
 type CleaningType = 'general' | 'deep' | 'move_out' | 'office';
 
@@ -57,6 +59,7 @@ function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const { user } = useAuth();
   const navLinks = [
     { href: '#about', label: 'O nas' },
     { href: '#services', label: 'Storitve' },
@@ -74,6 +77,18 @@ function Header() {
               {l.label}
             </a>
           ))}
+          {user ? (
+            <Link to="/profile" className="text-white/80 hover:text-teal-400 font-bold text-sm transition-colors flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-teal-400/20 text-teal-400 flex items-center justify-center font-black">
+                {user.email?.charAt(0).toUpperCase()}
+              </span>
+              Profil
+            </Link>
+          ) : (
+            <Link to="/login" className="text-white/80 hover:text-teal-400 font-semibold text-sm transition-colors">
+              Prijava
+            </Link>
+          )}
           <a href="#booking" className="bg-teal-400 hover:bg-teal-300 text-navy-500 font-bold text-sm px-5 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-teal-400/30">
             Zakazivanje
           </a>
@@ -89,6 +104,18 @@ function Header() {
               {l.label}
             </a>
           ))}
+          <a href="#booking" onClick={() => setMenuOpen(false)} className="mt-3 block text-center bg-teal-400 text-navy-500 font-bold text-sm px-5 py-2 rounded-full">
+            Zakazivanje
+          </a>
+          {user ? (
+            <Link to="/profile" onClick={() => setMenuOpen(false)} className="block py-2 text-teal-400 font-bold text-sm transition-colors">
+              Moj Profil
+            </Link>
+          ) : (
+            <Link to="/login" onClick={() => setMenuOpen(false)} className="block py-2 text-white/80 hover:text-teal-400 font-semibold text-sm transition-colors">
+              Prijava / Registracija
+            </Link>
+          )}
           <a href="#booking" onClick={() => setMenuOpen(false)} className="mt-3 block text-center bg-teal-400 text-navy-500 font-bold text-sm px-5 py-2 rounded-full">
             Zakazivanje
           </a>
@@ -404,8 +431,10 @@ function PriceEstimate({ rooms, sqft, cleaningType }: { rooms: number; sqft: num
 }
 
 function BookingForm() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState<FormData>({
-    name: '', email: '', phone: '', address: '',
+    name: '', email: user?.email || '', phone: '', address: '',
     rooms: 1, sqft: 0, cleaning_type: 'general',
     preferred_date: '', preferred_time: '',
     special_requests: '',
@@ -414,16 +443,28 @@ function BookingForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user?.email && !form.email) {
+      setForm(prev => ({ ...prev, email: user.email as string }));
+    }
+  }, [user, form.email]);
+
   const set = (field: keyof FormData, value: string | number) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     const estimate = estimatePrice(form.rooms, form.sqft, form.cleaning_type);
     const { error: dbError } = await supabase.from('booking_inquiries').insert({
+      user_id: user.id,
       name: form.name,
       email: form.email,
       phone: form.phone,
@@ -652,7 +693,9 @@ function BookingForm() {
         disabled={submitting}
         className="w-full bg-teal-400 hover:bg-teal-300 disabled:opacity-60 disabled:cursor-not-allowed text-navy-500 font-extrabold text-base py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-teal-400/30 flex items-center justify-center gap-2"
       >
-        {submitting ? (
+        {!user ? (
+          <><Lock size={18} /> Prijava potrebna za rezervacijo</>
+        ) : submitting ? (
           <><div className="w-5 h-5 border-2 border-navy-500/30 border-t-navy-500 rounded-full animate-spin" /> Pošiljam...</>
         ) : (
           <><Sparkles size={18} /> Pošlji Upit</>
