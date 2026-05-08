@@ -39,34 +39,10 @@ function estimatePrice(rooms: number, sqft: number, type: CleaningType): { min: 
 }
 
 function SCleaningLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
-  const dims = size === 'sm' ? 36 : size === 'lg' ? 72 : 48;
-  const textSize = size === 'sm' ? 'text-lg' : size === 'lg' ? 'text-3xl' : 'text-xl';
+  const heightClass = size === 'sm' ? 'h-10' : size === 'lg' ? 'h-24' : 'h-12';
   return (
-    <div className="flex items-center gap-3">
-      <svg width={dims} height={dims} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* S letter shape */}
-        <path
-          d="M52 22C52 16.477 47.523 12 42 12H30C24.477 12 20 16.477 20 22C20 27.523 24.477 32 30 32H50C55.523 32 60 36.477 60 42C60 47.523 55.523 52 50 52H28"
-          stroke="#1ABC9C"
-          strokeWidth="6"
-          strokeLinecap="round"
-          fill="none"
-        />
-        {/* Broom handle */}
-        <line x1="28" y1="52" x2="15" y2="68" stroke="#1ABC9C" strokeWidth="4" strokeLinecap="round"/>
-        {/* Broom bristles */}
-        <path d="M8 68 Q15 63 22 68 Q15 73 8 68Z" fill="#1ABC9C"/>
-        {/* Bubbles/dots */}
-        <circle cx="62" cy="22" r="4" fill="#1ABC9C" opacity="0.7"/>
-        <circle cx="70" cy="32" r="2.5" fill="#1ABC9C" opacity="0.5"/>
-        <circle cx="66" cy="14" r="2" fill="#1ABC9C" opacity="0.4"/>
-      </svg>
-      <div>
-        <div className={`font-extrabold tracking-wide text-teal-400 ${textSize} leading-none`}>S CLEANING</div>
-        {size !== 'sm' && (
-          <div className="text-xs text-navy-300 font-medium tracking-widest uppercase mt-0.5">Hristina Savić s.p.</div>
-        )}
-      </div>
+    <div className="flex items-center">
+      <img src="/SCleaning-logo.png" alt="S Cleaning Logo" className={`${heightClass} object-contain`} />
     </div>
   );
 }
