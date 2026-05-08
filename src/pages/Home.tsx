@@ -441,6 +441,20 @@ function BookingForm() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmedBookings, setConfirmedBookings] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    const fetchConfirmed = async () => {
+      const { data } = await supabase
+        .from('booking_inquiries')
+        .select('date, time')
+        .eq('status', 'confirmed');
+      if (data) {
+        setConfirmedBookings(data);
+      }
+    };
+    fetchConfirmed();
+  }, []);
 
   useEffect(() => {
     if (user?.email && !form.email) {
@@ -464,6 +478,7 @@ function BookingForm() {
     const { error: dbError } = await supabase.from('booking_inquiries').insert({
       user_id: user.id,
       full_name: form.name,
+      email: user.email,
       phone: form.phone,
       address: form.address,
       service_type: form.cleaning_type,
@@ -573,20 +588,28 @@ function BookingForm() {
           <div>
             <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Izberi čas</label>
             <div className="grid grid-cols-3 gap-2">
-              {TIME_SLOTS.map(slot => (
-                <button
-                  type="button"
-                  key={slot}
-                  onClick={() => set('preferred_time', slot)}
-                  className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-150 border
-                    ${form.preferred_time === slot
-                      ? 'bg-teal-400 text-white border-teal-400 shadow-md'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50'
-                    }`}
-                >
-                  {slot}
-                </button>
-              ))}
+              {TIME_SLOTS.map(slot => {
+                const isBooked = confirmedBookings.some(
+                  b => b.date === form.preferred_date && b.time === slot
+                );
+
+                return (
+                  <button
+                    type="button"
+                    key={slot}
+                    disabled={isBooked}
+                    onClick={() => set('preferred_time', slot)}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all duration-150 border
+                      ${isBooked ? 'bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed' :
+                        form.preferred_time === slot
+                        ? 'bg-teal-400 text-white border-teal-400 shadow-md'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50'
+                      }`}
+                  >
+                    {isBooked ? <span className="text-xs">Zasedeno</span> : slot}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
