@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Home, Calendar, Users, Settings, PieChart, TrendingUp, Bell, Search, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-import { LucideIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, Calendar, Users, Settings, PieChart, TrendingUp, Bell, Search, Menu, X, LucideIcon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 function StatCard({ title, value, trend, icon: Icon }: { title: string, value: string, trend: string, icon: LucideIcon }) {
   const positive = trend.startsWith('+');
@@ -24,6 +24,16 @@ function StatCard({ title, value, trend, icon: Icon }: { title: string, value: s
 
 export default function Admin() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading || !user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -105,45 +115,49 @@ export default function Admin() {
 }
 
 function ClientList() {
-  const clients = [
-    { id: '1', name: 'Ana Novak', email: 'ana.novak@example.com', phone: '+386 31 123 456', totalBookings: 3, lastBooking: '2023-11-15' },
-    { id: '2', name: 'Marko Kovač', email: 'marko.kovac@example.com', phone: '+386 41 987 654', totalBookings: 1, lastBooking: '2023-11-15' },
-    { id: '3', name: 'Petra Zajc', email: 'petra.zajc@example.com', phone: '+386 51 234 567', totalBookings: 5, lastBooking: '2023-11-16' },
-    { id: '4', name: 'Luka Horvat', email: 'luka.horvat@example.com', phone: '+386 31 345 678', totalBookings: 2, lastBooking: '2023-11-17' },
-  ];
+  const [clients, setClients] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const { data } = await supabase.rpc('get_all_clients');
+      if (data) {
+        setClients(data);
+      }
+    };
+    fetchClients();
+  }, []);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-        <h2 className="text-lg font-extrabold text-navy-500">Zadnje stranke</h2>
-        <button className="text-teal-500 hover:text-teal-600 font-bold text-sm">Prikaži vse</button>
+        <h2 className="text-lg font-extrabold text-navy-500">Seznam strank</h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Ime</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Kontakt</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Št. rezervacij</th>
-              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Zadnja rezervacija</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Datum registracije</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {clients.map(client => (
-              <tr key={client.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{client.name}</td>
-                <td className="py-4 px-6 text-gray-600 text-sm">
-                  <div className="flex flex-col">
-                    <span>{client.email}</span>
-                    <span className="text-xs text-gray-400 font-bold">{client.phone}</span>
-                  </div>
+            {clients.map((client: Record<string, unknown>) => (
+              <tr key={client.id as string} className="hover:bg-gray-50/50 transition-colors">
+                <td className="py-4 px-6 text-navy-500 font-bold text-sm">
+                  {client.email as string}
                 </td>
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{client.totalBookings}</td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
-                  {new Date(client.lastBooking).toLocaleDateString('sl-SI')}
+                  {client.created_at ? new Date(client.created_at as string).toLocaleDateString('sl-SI') : 'N/A'}
                 </td>
               </tr>
             ))}
+            {clients.length === 0 && (
+              <tr>
+                <td colSpan={2} className="py-8 text-center text-gray-500">
+                  Trenutno ni registriranih strank.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -151,26 +165,30 @@ function ClientList() {
   );
 }
 
-import { useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-
 function BookingTable() {
   const [bookings, setBookings] = useState<Record<string, unknown>[]>([]);
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
 
   useEffect(() => {
     const fetchBookings = async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('booking_inquiries')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (filter === 'pending') {
+        query = query.eq('status', 'pending');
+      }
+
+      const { data } = await query;
       if (data) {
         setBookings(data);
       }
     };
     fetchBookings();
-  }, []);
+  }, [filter]);
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, newStatus: string, email?: string) => {
     const { error } = await supabase
       .from('booking_inquiries')
       .update({ status: newStatus })
@@ -178,6 +196,13 @@ function BookingTable() {
 
     if (!error) {
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+
+      // Trigger email if confirmed
+      if (newStatus === 'confirmed' && email) {
+        await supabase.functions.invoke('send-email', {
+          body: { to: email }
+        });
+      }
     }
   };
 
@@ -200,8 +225,21 @@ function BookingTable() {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
       <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-        <h2 className="text-lg font-extrabold text-navy-500">Zadnji termini</h2>
-        <button className="text-teal-500 hover:text-teal-600 font-bold text-sm">Prikaži vse</button>
+        <h2 className="text-lg font-extrabold text-navy-500">Termini</h2>
+        <div className="flex bg-gray-50 p-1 rounded-xl">
+          <button
+            onClick={() => setFilter('pending')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'pending' ? 'bg-white shadow-sm text-navy-500' : 'text-gray-500 hover:text-navy-500'}`}
+          >
+            Na čakanju
+          </button>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all' ? 'bg-white shadow-sm text-navy-500' : 'text-gray-500 hover:text-navy-500'}`}
+          >
+            Vsi termini
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -244,7 +282,7 @@ function BookingTable() {
                 <td className="py-4 px-6 text-right space-x-2">
                   {booking.status === 'pending' && (
                     <>
-                      <button onClick={() => updateStatus(booking.id as string, 'confirmed')} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
+                      <button onClick={() => updateStatus(booking.id as string, 'confirmed', booking.email as string)} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
                         Potrdi
                       </button>
                       <button onClick={() => updateStatus(booking.id as string, 'rejected')} className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors">

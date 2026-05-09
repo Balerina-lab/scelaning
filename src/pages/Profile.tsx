@@ -39,6 +39,22 @@ export default function Profile() {
     navigate('/');
   };
 
+  const cancelBooking = async (id: string) => {
+    if (!confirm('Ali ste prepričani, da želite preklicati to rezervacijo?')) return;
+
+    const { error } = await supabase
+      .from('booking_inquiries')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('user_id', user?.id);
+
+    if (!error) {
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+    } else {
+      alert('Prišlo je do napake pri preklicu rezervacije.');
+    }
+  };
+
   if (loading || (fetching && user)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -123,6 +139,7 @@ export default function Profile() {
                     <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Datum</th>
                     <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Naslov</th>
                     <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Akcije</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -146,6 +163,16 @@ export default function Profile() {
                         <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['pending']}`}>
                           {statusTranslations[booking.status as string] || 'Na čakanju'}
                         </span>
+                      </td>
+                      <td className="py-5 px-6 text-right">
+                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                          <button
+                            onClick={() => cancelBooking(booking.id as string)}
+                            className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition-colors"
+                          >
+                            Prekliči rezervacijo
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
