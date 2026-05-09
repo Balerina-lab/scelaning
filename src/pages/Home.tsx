@@ -487,6 +487,7 @@ function BookingForm() {
       date: form.preferred_date || null,
       time: form.preferred_time,
       special_requests: form.special_requests,
+      status: 'V čakanju',
     });
     setSubmitting(false);
     if (dbError) {
