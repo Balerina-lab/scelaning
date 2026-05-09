@@ -119,7 +119,10 @@ function ClientList() {
 
   useEffect(() => {
     const fetchClients = async () => {
-      const { data } = await supabase.rpc('get_all_clients');
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
       if (data) {
         setClients(data);
       }
@@ -167,7 +170,7 @@ function ClientList() {
 
 function BookingTable() {
   const [bookings, setBookings] = useState<Record<string, unknown>[]>([]);
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const [filter, setFilter] = useState<'V čakanju' | 'all'>('V čakanju');
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -176,8 +179,8 @@ function BookingTable() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (filter === 'pending') {
-        query = query.eq('status', 'pending');
+      if (filter === 'V čakanju') {
+        query = query.eq('status', 'V čakanju');
       }
 
       const { data } = await query;
@@ -198,7 +201,7 @@ function BookingTable() {
       setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
 
       // Trigger email if confirmed
-      if (newStatus === 'confirmed' && email) {
+      if (newStatus === 'Potrjeno' && email) {
         await supabase.functions.invoke('send-email', {
           body: { to: email }
         });
@@ -207,19 +210,11 @@ function BookingTable() {
   };
 
   const statusColors: Record<string, string> = {
-    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'confirmed': 'bg-blue-100 text-blue-700 border-blue-200',
-    'completed': 'bg-teal-100 text-teal-700 border-teal-200',
-    'rejected': 'bg-red-100 text-red-700 border-red-200',
-    'cancelled': 'bg-gray-100 text-gray-700 border-gray-200',
-  };
-
-  const statusTranslations: Record<string, string> = {
-    'pending': 'Na čakanju',
-    'confirmed': 'Potrjeno',
-    'completed': 'Zaključeno',
-    'rejected': 'Zavrnjeno',
-    'cancelled': 'Odpovedano',
+    'V čakanju': 'bg-amber-100 text-amber-700 border-amber-200',
+    'Potrjeno': 'bg-blue-100 text-blue-700 border-blue-200',
+    'Zaključeno': 'bg-teal-100 text-teal-700 border-teal-200',
+    'Zavrnjeno': 'bg-red-100 text-red-700 border-red-200',
+    'Odpovedano': 'bg-gray-100 text-gray-700 border-gray-200',
   };
 
   return (
@@ -228,8 +223,8 @@ function BookingTable() {
         <h2 className="text-lg font-extrabold text-navy-500">Termini</h2>
         <div className="flex bg-gray-50 p-1 rounded-xl">
           <button
-            onClick={() => setFilter('pending')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'pending' ? 'bg-white shadow-sm text-navy-500' : 'text-gray-500 hover:text-navy-500'}`}
+            onClick={() => setFilter('V čakanju')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'V čakanju' ? 'bg-white shadow-sm text-navy-500' : 'text-gray-500 hover:text-navy-500'}`}
           >
             Na čakanju
           </button>
@@ -275,23 +270,23 @@ function BookingTable() {
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['pending']}`}>
-                    {statusTranslations[booking.status as string] || 'Na čakanju'}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['V čakanju']}`}>
+                    {booking.status as string || 'V čakanju'}
                   </span>
                 </td>
                 <td className="py-4 px-6 text-right space-x-2">
-                  {booking.status === 'pending' && (
+                  {booking.status === 'V čakanju' && (
                     <>
-                      <button onClick={() => updateStatus(booking.id as string, 'confirmed', booking.email as string)} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
+                      <button onClick={() => updateStatus(booking.id as string, 'Potrjeno', booking.email as string)} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
                         Potrdi
                       </button>
-                      <button onClick={() => updateStatus(booking.id as string, 'rejected')} className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors">
+                      <button onClick={() => updateStatus(booking.id as string, 'Zavrnjeno')} className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors">
                         Zavrni
                       </button>
                     </>
                   )}
-                  {booking.status === 'confirmed' && (
-                    <button onClick={() => updateStatus(booking.id as string, 'completed')} className="px-3 py-1 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg text-xs font-bold transition-colors">
+                  {booking.status === 'Potrjeno' && (
+                    <button onClick={() => updateStatus(booking.id as string, 'Zaključeno')} className="px-3 py-1 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg text-xs font-bold transition-colors">
                       Zaključi
                     </button>
                   )}
