@@ -44,12 +44,12 @@ export default function Profile() {
 
     const { error } = await supabase
       .from('booking_inquiries')
-      .update({ status: 'cancelled' })
+      .update({ status: 'Odpovedano' })
       .eq('id', id)
       .eq('user_id', user?.id);
 
     if (!error) {
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'Odpovedano' } : b));
     } else {
       alert('Prišlo je do napake pri preklicu rezervacije.');
     }
@@ -65,18 +65,12 @@ export default function Profile() {
 
   if (!user) return null; // Prevent flicker while navigating
 
-  const statusTranslations: Record<string, string> = {
-    'pending': 'Na čakanju',
-    'confirmed': 'Potrjeno',
-    'completed': 'Zaključeno',
-    'cancelled': 'Odpovedano',
-  };
-
   const statusColors: Record<string, string> = {
-    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
-    'confirmed': 'bg-blue-100 text-blue-700 border-blue-200',
-    'completed': 'bg-teal-100 text-teal-700 border-teal-200',
-    'cancelled': 'bg-red-100 text-red-700 border-red-200',
+    'V čakanju': 'bg-amber-100 text-amber-700 border-amber-200',
+    'Potrjeno': 'bg-blue-100 text-blue-700 border-blue-200',
+    'Zaključeno': 'bg-teal-100 text-teal-700 border-teal-200',
+    'Zavrnjeno': 'bg-red-100 text-red-700 border-red-200',
+    'Odpovedano': 'bg-gray-100 text-gray-700 border-gray-200',
   };
 
   return (
@@ -160,12 +154,12 @@ export default function Profile() {
                         {booking.address as string}
                       </td>
                       <td className="py-5 px-6">
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['pending']}`}>
-                          {statusTranslations[booking.status as string] || 'Na čakanju'}
+                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['V čakanju']}`}>
+                          {booking.status as string || 'V čakanju'}
                         </span>
                       </td>
                       <td className="py-5 px-6 text-right">
-                        {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                        {(booking.status === 'V čakanju' || booking.status === 'Potrjeno') && (
                           <button
                             onClick={() => cancelBooking(booking.id as string)}
                             className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline transition-colors"

@@ -448,7 +448,7 @@ function BookingForm() {
       const { data } = await supabase
         .from('booking_inquiries')
         .select('date, time')
-        .eq('status', 'confirmed');
+        .eq('status', 'Potrjeno');
       if (data) {
         setConfirmedBookings(data);
       }
