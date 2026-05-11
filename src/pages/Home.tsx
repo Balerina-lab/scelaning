@@ -20,7 +20,7 @@ interface FormData {
   frequency: string;
   subscription_months: number | null;
   extras: string[];
-  image: File | null;
+  images: File[];
 }
 
 const TIME_SLOTS = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
@@ -502,7 +502,7 @@ function BookingForm() {
     frequency: 'Samo enkrat',
     subscription_months: null,
     extras: [],
-    image: null,
+    images: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -542,8 +542,14 @@ function BookingForm() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      set('image', e.target.files[0]);
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      if (filesArray.length > 5) {
+        setError('Izberete lahko največ 5 slik.');
+        return;
+      }
+      setError(null);
+      set('images', filesArray);
     }
   };
 
@@ -575,9 +581,11 @@ function BookingForm() {
     setSubmitting(true);
     setError(null);
 
-    let imageUrl = null;
-    if (form.image) {
-      imageUrl = await uploadImage(form.image);
+    let imageUrls: string[] = [];
+    if (form.images.length > 0) {
+      const uploadPromises = form.images.map(img => uploadImage(img));
+      const results = await Promise.all(uploadPromises);
+      imageUrls = results.filter(url => url !== null) as string[];
     }
 
     const { error: dbError } = await supabase.from('booking_inquiries').insert({
@@ -595,7 +603,7 @@ function BookingForm() {
       frequency: form.frequency,
       subscription_months: form.subscription_months,
       extras: form.extras,
-      property_image_url: imageUrl,
+      property_image_url: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
       total_price: calculateTotalPrice(form),
       status: 'V čakanju',
     });
@@ -883,20 +891,21 @@ function BookingForm() {
             type="file"
             id="image-upload"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handleImageChange}
           />
           <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
-            {form.image ? (
+            {form.images.length > 0 ? (
               <>
                 <CheckCircle size={32} className="text-teal-400 mb-2" />
-                <span className="text-sm font-bold text-navy-500">{form.image.name}</span>
-                <span className="text-xs text-gray-400 mt-1">Kliknite za zamenjavo slike</span>
+                <span className="text-sm font-bold text-navy-500">{form.images.length} slika/e izbrane</span>
+                <span className="text-xs text-gray-400 mt-1">Kliknite za zamenjavo slik (max 5)</span>
               </>
             ) : (
               <>
                 <UploadCloud size={32} className="text-gray-400 mb-2" />
-                <span className="text-sm font-bold text-navy-500">Naloži sliko prostora (neobvezno)</span>
+                <span className="text-sm font-bold text-navy-500">Naloži slike prostora (neobvezno, max 5)</span>
                 <span className="text-xs text-gray-400 mt-1">Pomagajte nam pri natančnejši oceni</span>
               </>
             )}

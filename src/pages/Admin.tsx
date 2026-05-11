@@ -296,9 +296,7 @@ function PendingBookingsTable() {
                 <td className="py-4 px-6 font-bold text-navy-500 text-sm">
                   {booking.full_name as string}
                   {typeof booking.property_image_url === 'string' && (
-                    <a href={booking.property_image_url} target="_blank" rel="noreferrer" className="block text-xs text-teal-500 hover:underline mt-1">
-                      Pogled slike
-                    </a>
+                    <ImageGallery urlData={booking.property_image_url} />
                   )}
                 </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
@@ -507,9 +505,7 @@ function AllBookingsTable() {
                 <td className="py-4 px-6 font-bold text-navy-500 text-sm">
                   {booking.full_name as string}
                   {typeof booking.property_image_url === 'string' && (
-                    <a href={booking.property_image_url} target="_blank" rel="noreferrer" className="block text-xs text-teal-500 hover:underline mt-1">
-                      Pogled slike
-                    </a>
+                    <ImageGallery urlData={booking.property_image_url} />
                   )}
                 </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
@@ -561,5 +557,82 @@ function AllBookingsTable() {
         </table>
       </div>
     </div>
+  );
+}
+
+function ImageGallery({ urlData }: { urlData: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  let urls: string[] = [];
+  try {
+    const parsed = JSON.parse(urlData);
+    if (Array.isArray(parsed)) urls = parsed;
+    else if (typeof urlData === 'string' && urlData.startsWith('http')) urls = [urlData];
+  } catch {
+    if (typeof urlData === 'string' && urlData.startsWith('http')) urls = [urlData];
+  }
+
+  if (urls.length === 0) return null;
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2 mt-2">
+        {urls.slice(0, 3).map((url, i) => (
+          <button
+            key={i}
+            onClick={() => { setCurrentIndex(i); setIsOpen(true); }}
+            className="w-10 h-10 rounded-md overflow-hidden border border-gray-200 hover:opacity-80 transition-opacity"
+          >
+            <img src={url} alt={`Property image ${i + 1}`} className="w-full h-full object-cover" />
+          </button>
+        ))}
+        {urls.length > 3 && (
+          <button
+            onClick={() => { setCurrentIndex(3); setIsOpen(true); }}
+            className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 border border-gray-200"
+          >
+            +{urls.length - 3}
+          </button>
+        )}
+      </div>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+          <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-white hover:text-gray-300">
+            <X size={32} />
+          </button>
+
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center">
+            {urls.length > 1 && (
+              <button
+                onClick={() => setCurrentIndex(prev => (prev === 0 ? urls.length - 1 : prev - 1))}
+                className="absolute left-0 p-2 text-white hover:text-teal-400 transition-colors"
+              >
+                <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </div>
+              </button>
+            )}
+
+            <img src={urls[currentIndex]} alt={`Full size ${currentIndex + 1}`} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+
+            {urls.length > 1 && (
+              <button
+                onClick={() => setCurrentIndex(prev => (prev === urls.length - 1 ? 0 : prev + 1))}
+                className="absolute right-0 p-2 text-white hover:text-teal-400 transition-colors"
+              >
+                <div className="bg-black/50 p-2 rounded-full backdrop-blur-sm">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+              </button>
+            )}
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-white/70 text-sm font-bold">
+              {currentIndex + 1} / {urls.length}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
