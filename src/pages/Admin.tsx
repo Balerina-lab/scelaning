@@ -145,7 +145,7 @@ function AllClientsTable() {
   useEffect(() => {
     const fetchClients = async () => {
       const { data: profilesData } = await supabase
-        .from('profiles')
+        .from('customer_profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -220,14 +220,24 @@ function PendingBookingsTable() {
       const { data } = await supabase
         .from('booking_inquiries')
         .select('*')
-        .eq('status', 'V čakanju')
+        .in('status', ['V čakanju', 'pending', 'Pending'])
         .order('created_at', { ascending: false });
 
       if (data) {
         setBookings(data);
       }
     };
+
     fetchBookings();
+
+    const subscription = supabase
+      .channel('public:booking_inquiries')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_inquiries' }, fetchBookings)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   const updateStatus = async (id: string, newStatus: string, email?: string) => {
@@ -247,6 +257,22 @@ function PendingBookingsTable() {
     }
   };
 
+  const statusColors: Record<string, string> = {
+    'V čakanju': 'bg-amber-100 text-amber-700 border-amber-200',
+    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
+    'Pending': 'bg-amber-100 text-amber-700 border-amber-200',
+    'Potrjeno': 'bg-blue-100 text-blue-700 border-blue-200',
+    'Zaključeno': 'bg-green-100 text-green-700 border-green-200',
+    'Zavrnjeno': 'bg-red-100 text-red-700 border-red-200',
+    'Odpovedano': 'bg-red-100 text-red-700 border-red-200',
+  };
+
+  const getStatusLabel = (status: string | undefined | null) => {
+    if (!status) return 'V čakanju';
+    if (status.toLowerCase() === 'pending') return 'V čakanju';
+    return status;
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
       <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -260,6 +286,7 @@ function PendingBookingsTable() {
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Storitev</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Datum in čas</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Kontakt</th>
+              <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
               <th className="py-3 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Akcije</th>
             </tr>
           </thead>
@@ -283,6 +310,11 @@ function PendingBookingsTable() {
                     <span className="text-xs">{booking.email as string}</span>
                     <span className="text-xs font-normal text-gray-500">{booking.phone as string}</span>
                   </div>
+                </td>
+                <td className="py-4 px-6">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['V čakanju']}`}>
+                    {getStatusLabel(booking.status as string)}
+                  </span>
                 </td>
                 <td className="py-4 px-6 text-right space-x-2">
                   <button onClick={() => updateStatus(booking.id as string, 'Potrjeno', booking.email as string)} className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors mr-2">
@@ -314,7 +346,7 @@ function NewUsersTable() {
   useEffect(() => {
     const fetchNewUsers = async () => {
       // Fetch all profiles
-      const { data: profilesData } = await supabase.from('profiles').select('id, email, created_at');
+      const { data: profilesData } = await supabase.from('customer_profiles').select('id, email, created_at');
 
       // Fetch all booking user_ids
       const { data: bookingsData } = await supabase.from('booking_inquiries').select('user_id');
@@ -325,7 +357,17 @@ function NewUsersTable() {
         setUsers(usersWithoutBookings);
       }
     };
+
     fetchNewUsers();
+
+    const subscription = supabase
+      .channel('public:booking_inquiries:new_users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_inquiries' }, fetchNewUsers)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
 
   return (
@@ -398,10 +440,18 @@ function AllBookingsTable() {
 
   const statusColors: Record<string, string> = {
     'V čakanju': 'bg-amber-100 text-amber-700 border-amber-200',
+    'pending': 'bg-amber-100 text-amber-700 border-amber-200',
+    'Pending': 'bg-amber-100 text-amber-700 border-amber-200',
     'Potrjeno': 'bg-blue-100 text-blue-700 border-blue-200',
     'Zaključeno': 'bg-green-100 text-green-700 border-green-200',
     'Zavrnjeno': 'bg-red-100 text-red-700 border-red-200',
     'Odpovedano': 'bg-red-100 text-red-700 border-red-200',
+  };
+
+  const getStatusLabel = (status: string | undefined | null) => {
+    if (!status) return 'V čakanju';
+    if (status.toLowerCase() === 'pending') return 'V čakanju';
+    return status;
   };
 
   return (
@@ -453,7 +503,7 @@ function AllBookingsTable() {
                 </td>
                 <td className="py-4 px-6">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[booking.status as string] || statusColors['V čakanju']}`}>
-                    {booking.status as string || 'V čakanju'}
+                    {getStatusLabel(booking.status as string)}
                   </span>
                 </td>
               </tr>
