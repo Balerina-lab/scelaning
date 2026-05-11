@@ -32,7 +32,7 @@ const CLEANING_TYPES: { value: CleaningType; label: string; coefficient: number;
   { value: 'office', label: 'Pisarniško čiščenje', coefficient: 0.1, base: 50 },
 ];
 
-const EXTRAS: { id: string; label: string; price: number; icon: any }[] = [
+const EXTRAS: { id: string; label: string; price: number; icon: React.ElementType }[] = [
   { id: 'pecica', label: 'Notranjost pečice', price: 20, icon: OvenIcon },
   { id: 'hladilnik', label: 'Notranjost hladilnika', price: 15, icon: Refrigerator },
   { id: 'okna', label: 'Čiščenje oken', price: 30, icon: Wind },
@@ -596,6 +596,7 @@ function BookingForm() {
       subscription_months: form.subscription_months,
       extras: form.extras,
       property_image_url: imageUrl,
+      total_price: calculateTotalPrice(form),
       status: 'V čakanju',
     });
     setSubmitting(false);
@@ -612,8 +613,8 @@ function BookingForm() {
 
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      <div className="flex-1">
+    <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex-1 w-full">
         <form onSubmit={handleSubmit} className="space-y-8">
       {/* Progress Bar */}
       <div className="mb-10">
@@ -685,7 +686,7 @@ function BookingForm() {
         {/* Frequency */}
         <div className="mb-6">
           <label className="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">Pogostost čiščenja</label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {FREQUENCIES.map(freq => (
               <button
                 type="button"
@@ -694,10 +695,10 @@ function BookingForm() {
                   set('frequency', freq);
                   if (freq === 'Samo enkrat') set('subscription_months', null);
                 }}
-                className={`py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200 border text-center ${
+                className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 border text-center ${
                   form.frequency === freq
-                    ? 'bg-teal-400 text-white border-teal-400 shadow-md shadow-teal-400/20'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50'
+                    ? 'bg-teal-400 text-white border-teal-400 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600'
                 }`}
               >
                 {freq}
