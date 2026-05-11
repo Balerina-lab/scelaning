@@ -293,11 +293,32 @@ function PendingBookingsTable() {
           <tbody className="divide-y divide-gray-100">
             {bookings.map((booking: Record<string, unknown>) => (
               <tr key={booking.id as string} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{booking.full_name as string}</td>
+                <td className="py-4 px-6 font-bold text-navy-500 text-sm">
+                  {booking.full_name as string}
+                  {typeof booking.property_image_url === 'string' && (
+                    <a href={booking.property_image_url} target="_blank" rel="noreferrer" className="block text-xs text-teal-500 hover:underline mt-1">
+                      Pogled slike
+                    </a>
+                  )}
+                </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
-                  {booking.service_type === 'general' ? 'Splošno čiščenje' :
-                   booking.service_type === 'deep' ? 'Globinsko čiščenje' :
-                   booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                  <div className="font-bold text-navy-500">
+                    {booking.service_type === 'general' ? 'Splošno čiščenje' :
+                     booking.service_type === 'deep' ? 'Globinsko čiščenje' :
+                     booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {booking.frequency as string}
+                    {typeof booking.subscription_months === 'number' ? ` (${booking.subscription_months} mes)` : ''}
+                  </div>
+                  {Array.isArray(booking.extras) && booking.extras.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(booking.extras as string[]).map((e: string) => {
+                         const label = e === 'pecica' ? 'Notranjost pečice' : e === 'hladilnik' ? 'Notranjost hladilnika' : e === 'okna' ? 'Čiščenje oken' : e;
+                         return <span key={e} className="bg-teal-50 text-teal-600 text-[10px] px-2 py-0.5 rounded-full">{label}</span>;
+                      })}
+                    </div>
+                  )}
                 </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
                   <div className="flex flex-col">
@@ -483,11 +504,32 @@ function AllBookingsTable() {
           <tbody className="divide-y divide-gray-100">
             {filteredBookings.map((booking) => (
               <tr key={booking.id as string} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-4 px-6 font-bold text-navy-500 text-sm">{booking.full_name as string}</td>
+                <td className="py-4 px-6 font-bold text-navy-500 text-sm">
+                  {booking.full_name as string}
+                  {typeof booking.property_image_url === 'string' && (
+                    <a href={booking.property_image_url} target="_blank" rel="noreferrer" className="block text-xs text-teal-500 hover:underline mt-1">
+                      Pogled slike
+                    </a>
+                  )}
+                </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
-                  {booking.service_type === 'general' ? 'Splošno čiščenje' :
-                   booking.service_type === 'deep' ? 'Globinsko čiščenje' :
-                   booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                  <div className="font-bold text-navy-500">
+                    {booking.service_type === 'general' ? 'Splošno čiščenje' :
+                     booking.service_type === 'deep' ? 'Globinsko čiščenje' :
+                     booking.service_type === 'office' ? 'Pisarniško čiščenje' : 'Čiščenje ob odhodu'}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {booking.frequency as string}
+                    {typeof booking.subscription_months === 'number' ? ` (${booking.subscription_months} mes)` : ''}
+                  </div>
+                  {Array.isArray(booking.extras) && booking.extras.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(booking.extras as string[]).map((e: string) => {
+                         const label = e === 'pecica' ? 'Notranjost pečice' : e === 'hladilnik' ? 'Notranjost hladilnika' : e === 'okna' ? 'Čiščenje oken' : e;
+                         return <span key={e} className="bg-teal-50 text-teal-600 text-[10px] px-2 py-0.5 rounded-full">{label}</span>;
+                      })}
+                    </div>
+                  )}
                 </td>
                 <td className="py-4 px-6 text-gray-600 text-sm">
                   <div className="flex flex-col">

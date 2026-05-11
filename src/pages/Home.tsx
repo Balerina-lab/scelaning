@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, Mail, MapPin, Clock, Star, Shield, Sparkles, ChevronDown, Menu, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Star, Shield, Sparkles, ChevronDown, Menu, X, CheckCircle, AlertCircle, Lock, UploadCloud, Monitor as OvenIcon, Refrigerator, Wind } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -17,27 +17,55 @@ interface FormData {
   preferred_date: string;
   preferred_time: string;
   special_requests: string;
+  frequency: string;
+  subscription_months: number | null;
+  extras: string[];
+  image: File | null;
 }
 
 const TIME_SLOTS = ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
-const CLEANING_TYPES: { value: CleaningType; label: string; coefficient: number }[] = [
-  { value: 'general', label: 'Splošno čiščenje', coefficient: 0.08 },
-  { value: 'deep', label: 'Globinsko čiščenje', coefficient: 0.14 },
-  { value: 'move_out', label: 'Čiščenje ob odhodu', coefficient: 0.18 },
-  { value: 'office', label: 'Pisarniško čiščenje', coefficient: 0.1 },
+const CLEANING_TYPES: { value: CleaningType; label: string; coefficient: number; base: number }[] = [
+  { value: 'general', label: 'Splošno čiščenje', coefficient: 0.08, base: 35 },
+  { value: 'deep', label: 'Globinsko čiščenje', coefficient: 0.14, base: 65 },
+  { value: 'move_out', label: 'Čiščenje ob odhodu', coefficient: 0.18, base: 90 },
+  { value: 'office', label: 'Pisarniško čiščenje', coefficient: 0.1, base: 50 },
 ];
 
-function estimatePrice(rooms: number, sqft: number, type: CleaningType): { min: number; max: number } | null {
-  if (!rooms || !sqft) return null;
-  const typeConfig = CLEANING_TYPES.find(t => t.value === type)!;
-  const base = 25 + rooms * 8;
-  const area = sqft * typeConfig.coefficient;
-  const mid = base + area;
-  return {
-    min: Math.round(mid * 0.85),
-    max: Math.round(mid * 1.15),
-  };
+const EXTRAS: { id: string; label: string; price: number; icon: any }[] = [
+  { id: 'pecica', label: 'Notranjost pečice', price: 20, icon: OvenIcon },
+  { id: 'hladilnik', label: 'Notranjost hladilnika', price: 15, icon: Refrigerator },
+  { id: 'okna', label: 'Čiščenje oken', price: 30, icon: Wind },
+];
+
+const FREQUENCIES = ['Samo enkrat', 'Tedensko', 'Na 2 tedna', 'Na 4 tedne'];
+const SUBSCRIPTIONS = [
+  { months: 3, discount: 0.05 },
+  { months: 6, discount: 0.10 },
+  { months: 12, discount: 0.15 },
+];
+
+function calculateTotalPrice(form: FormData): number {
+  if (!form.rooms || !form.sqft) return 0;
+  const typeConfig = CLEANING_TYPES.find(t => t.value === form.cleaning_type)!;
+
+  let price = typeConfig.base + (form.rooms * 8) + (form.sqft * typeConfig.coefficient);
+
+  // Add extras
+  form.extras.forEach(extraId => {
+    const extra = EXTRAS.find(e => e.id === extraId);
+    if (extra) price += extra.price;
+  });
+
+  // Apply subscription discount
+  if (form.frequency !== 'Samo enkrat' && form.subscription_months) {
+    const sub = SUBSCRIPTIONS.find(s => s.months === form.subscription_months);
+    if (sub) {
+      price = price * (1 - sub.discount);
+    }
+  }
+
+  return Math.round(price);
 }
 
 function SCleaningLogo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
@@ -399,32 +427,65 @@ function CalendarPicker({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-function PriceEstimate({ rooms, sqft, cleaningType }: { rooms: number; sqft: number; cleaningType: CleaningType }) {
-  const estimate = estimatePrice(rooms, sqft, cleaningType);
-  if (!estimate) {
-    return (
-      <div className="bg-gray-50 rounded-2xl p-5 border border-dashed border-gray-300 text-center">
-        <Sparkles size={24} className="text-gray-300 mx-auto mb-2" />
-        <p className="text-gray-400 text-sm">Vnesite podatke o prostoru za okvirno oceno cene</p>
-      </div>
-    );
-  }
+function OrderSummary({ form }: { form: FormData }) {
+  const price = calculateTotalPrice(form);
+  const isSubscription = form.frequency !== 'Samo enkrat' && form.subscription_months;
+  const sub = isSubscription ? SUBSCRIPTIONS.find(s => s.months === form.subscription_months) : null;
+
   return (
-    <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 rounded-2xl p-5 border border-teal-200">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={16} className="text-teal-500" />
-        <span className="text-teal-700 font-bold text-sm">Okvirna ocena cene</span>
+    <div className="bg-navy-500 rounded-3xl p-6 text-white sticky top-24 shadow-xl shadow-navy-500/20">
+      <h3 className="text-xl font-extrabold mb-6 flex items-center gap-2">
+        <Sparkles size={20} className="text-teal-400" />
+        Vaš izračun
+      </h3>
+
+      <div className="space-y-4 mb-6">
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-white/70">Storitev:</span>
+          <span className="font-bold">{CLEANING_TYPES.find(t => t.value === form.cleaning_type)?.label}</span>
+        </div>
+        {form.rooms > 0 && form.sqft > 0 && (
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-white/70">Prostor:</span>
+            <span className="font-bold">{form.rooms} sobe, {form.sqft} m²</span>
+          </div>
+        )}
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-white/70">Pogostost:</span>
+          <span className="font-bold">{form.frequency}</span>
+        </div>
+
+        {form.extras.length > 0 && (
+          <div className="pt-4 border-t border-white/10 space-y-2">
+            <div className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-2">Dodatki</div>
+            {form.extras.map(extraId => {
+              const ex = EXTRAS.find(e => e.id === extraId);
+              return ex ? (
+                <div key={extraId} className="flex justify-between items-center text-sm">
+                  <span className="text-white/70">{ex.label}</span>
+                  <span className="font-bold">+{ex.price}€</span>
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+
+        {isSubscription && sub && (
+          <div className="pt-4 border-t border-white/10 flex justify-between items-center text-sm text-amber-400">
+            <span>Popust ({sub.months} mesecev):</span>
+            <span className="font-bold">-{sub.discount * 100}%</span>
+          </div>
+        )}
       </div>
-      <div className="text-3xl font-extrabold text-navy-500 mb-1">
-        {estimate.min}€ – {estimate.max}€
-      </div>
-      <p className="text-teal-600/80 text-xs leading-relaxed">
-        Končna cena bo poslana po pregledu zahteve. Ocena je okvirna in se lahko razlikuje glede na dejansko stanje prostora.
-      </p>
-      <div className="mt-3 pt-3 border-t border-teal-200 flex flex-wrap gap-3 text-xs">
-        <span className="text-gray-500">Sobe: <strong className="text-navy-500">{rooms}</strong></span>
-        <span className="text-gray-500">Površina: <strong className="text-navy-500">{sqft} m²</strong></span>
-        <span className="text-gray-500">Vrsta: <strong className="text-navy-500">{CLEANING_TYPES.find(t => t.value === cleaningType)?.label}</strong></span>
+
+      <div className="pt-6 border-t border-white/10">
+        <div className="flex justify-between items-end mb-2">
+          <span className="text-white/80 font-bold">Skupaj:</span>
+          <span className="text-4xl font-black text-teal-400">{price > 0 ? `${price}€` : '--'}</span>
+        </div>
+        <p className="text-xs text-white/50 text-right">
+          *Končna cena se lahko razlikuje po pregledu.
+        </p>
       </div>
     </div>
   );
@@ -438,6 +499,10 @@ function BookingForm() {
     rooms: 1, sqft: 0, cleaning_type: 'general',
     preferred_date: '', preferred_time: '',
     special_requests: '',
+    frequency: 'Samo enkrat',
+    subscription_months: null,
+    extras: [],
+    image: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -462,8 +527,42 @@ function BookingForm() {
     }
   }, [user, form.email]);
 
-  const set = (field: keyof FormData, value: string | number) => {
+  const set = (field: keyof FormData, value: FormData[keyof FormData]) => {
     setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const toggleExtra = (extraId: string) => {
+    setForm(prev => {
+      const isSelected = prev.extras.includes(extraId);
+      return {
+        ...prev,
+        extras: isSelected ? prev.extras.filter(id => id !== extraId) : [...prev.extras, extraId]
+      };
+    });
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      set('image', e.target.files[0]);
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${user?.id}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('property-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Image upload error:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('property-images').getPublicUrl(filePath);
+    return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -475,6 +574,12 @@ function BookingForm() {
 
     setSubmitting(true);
     setError(null);
+
+    let imageUrl = null;
+    if (form.image) {
+      imageUrl = await uploadImage(form.image);
+    }
+
     const { error: dbError } = await supabase.from('booking_inquiries').insert({
       user_id: user.id,
       full_name: form.name,
@@ -487,6 +592,10 @@ function BookingForm() {
       date: form.preferred_date || null,
       time: form.preferred_time,
       special_requests: form.special_requests,
+      frequency: form.frequency,
+      subscription_months: form.subscription_months,
+      extras: form.extras,
+      property_image_url: imageUrl,
       status: 'V čakanju',
     });
     setSubmitting(false);
@@ -503,7 +612,9 @@ function BookingForm() {
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex-1">
+        <form onSubmit={handleSubmit} className="space-y-8">
       {/* Progress Bar */}
       <div className="mb-10">
         <div className="flex items-center justify-between relative">
@@ -537,7 +648,7 @@ function BookingForm() {
           <span className="w-8 h-8 bg-teal-400 text-white rounded-xl flex items-center justify-center text-sm font-black shadow-sm">1</span>
           Podrobnosti storitve
         </h3>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Število sob</label>
             <input
@@ -570,10 +681,96 @@ function BookingForm() {
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Price Estimate */}
-      <PriceEstimate rooms={form.rooms} sqft={form.sqft} cleaningType={form.cleaning_type} />
+        {/* Frequency */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">Pogostost čiščenja</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {FREQUENCIES.map(freq => (
+              <button
+                type="button"
+                key={freq}
+                onClick={() => {
+                  set('frequency', freq);
+                  if (freq === 'Samo enkrat') set('subscription_months', null);
+                }}
+                className={`py-3 px-4 rounded-xl text-sm font-bold transition-all duration-200 border text-center ${
+                  form.frequency === freq
+                    ? 'bg-teal-400 text-white border-teal-400 shadow-md shadow-teal-400/20'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50'
+                }`}
+              >
+                {freq}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Subscription (Conditional) */}
+        {form.frequency !== 'Samo enkrat' && (
+          <div className="mb-6 p-5 bg-teal-50/50 rounded-2xl border border-teal-100 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={16} className="text-amber-500" />
+              <label className="block text-xs font-bold text-navy-500 uppercase tracking-wide">Izberite plan in prihranite</label>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {SUBSCRIPTIONS.map(sub => (
+                <button
+                  type="button"
+                  key={sub.months}
+                  onClick={() => set('subscription_months', sub.months)}
+                  className={`relative py-4 px-4 rounded-xl text-center transition-all duration-200 border ${
+                    form.subscription_months === sub.months
+                      ? 'bg-white border-teal-400 shadow-md ring-2 ring-teal-400/20'
+                      : 'bg-white border-gray-200 hover:border-teal-300'
+                  }`}
+                >
+                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider text-white shadow-sm ${
+                    form.subscription_months === sub.months ? 'bg-amber-500' : 'bg-gray-300'
+                  }`}>
+                    -{sub.discount * 100}%
+                  </div>
+                  <div className={`font-extrabold mt-1 ${form.subscription_months === sub.months ? 'text-teal-600' : 'text-gray-500'}`}>
+                    {sub.months} mesecev
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Extras */}
+        <div>
+          <label className="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wide">Dodatki</label>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {EXTRAS.map(extra => {
+              const isSelected = form.extras.includes(extra.id);
+              return (
+                <button
+                  type="button"
+                  key={extra.id}
+                  onClick={() => toggleExtra(extra.id)}
+                  className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 text-left ${
+                    isSelected
+                      ? 'bg-teal-50 border-teal-400 ring-1 ring-teal-400'
+                      : 'bg-white border-gray-200 hover:border-teal-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <extra.icon size={16} className={isSelected ? 'text-teal-500' : 'text-gray-400'} />
+                    <span className={`text-sm font-bold ${isSelected ? 'text-teal-700' : 'text-gray-600'}`}>
+                    {extra.label}
+                  </span>
+                  </div>
+                  <span className={`text-xs font-black ${isSelected ? 'text-teal-600' : 'text-gray-400'}`}>
+                    +{extra.price}€
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* DateTime */}
       <div className={`transition-opacity duration-300 ${currentStep < 2 ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -670,15 +867,40 @@ function BookingForm() {
       <div className={`transition-opacity duration-300 ${currentStep < 4 ? 'opacity-50 pointer-events-none' : ''}`}>
         <h3 className="text-xl font-extrabold text-navy-500 mb-5 flex items-center gap-3">
           <span className="w-8 h-8 bg-teal-400 text-white rounded-xl flex items-center justify-center text-sm font-black shadow-sm">4</span>
-          Posebne zahteve
+          Posebne zahteve in slike
         </h3>
         <textarea
           rows={4}
           value={form.special_requests}
           onChange={e => set('special_requests', e.target.value)}
           placeholder="Opišite natanko, kaj potrebujete – posebna območja, alergije, dostop do prostorov, posebni materiali ali karkoli drugega, kar bi morali vedeti..."
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all placeholder:text-gray-400 resize-none"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 transition-all placeholder:text-gray-400 resize-none mb-4"
         />
+
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
+          <input
+            type="file"
+            id="image-upload"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+          />
+          <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center">
+            {form.image ? (
+              <>
+                <CheckCircle size={32} className="text-teal-400 mb-2" />
+                <span className="text-sm font-bold text-navy-500">{form.image.name}</span>
+                <span className="text-xs text-gray-400 mt-1">Kliknite za zamenjavo slike</span>
+              </>
+            ) : (
+              <>
+                <UploadCloud size={32} className="text-gray-400 mb-2" />
+                <span className="text-sm font-bold text-navy-500">Naloži sliko prostora (neobvezno)</span>
+                <span className="text-xs text-gray-400 mt-1">Pomagajte nam pri natančnejši oceni</span>
+              </>
+            )}
+          </label>
+        </div>
       </div>
 
       {error && (
@@ -701,7 +923,17 @@ function BookingForm() {
           <><Sparkles size={18} /> Pošlji Upit</>
         )}
       </button>
-    </form>
+        </form>
+      </div>
+
+      <div className="hidden lg:block w-80 flex-shrink-0">
+        <OrderSummary form={form} />
+      </div>
+
+      <div className="lg:hidden mt-8">
+        <OrderSummary form={form} />
+      </div>
+    </div>
   );
 }
 
